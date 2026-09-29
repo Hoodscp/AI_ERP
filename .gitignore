@@ -1,0 +1,26 @@
+# Secrets and local environment
+.env
+**/.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node/frontend tooling
+node_modules/
+dist/
+build/
+
+# Docker and local data
+postgres_data/
+*.log
+
+# IDE and OS files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

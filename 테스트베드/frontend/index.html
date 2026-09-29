@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI ERP 테스트베드</title>
+  <style>
+    body{font-family:Arial,sans-serif;max-width:1000px;margin:32px auto;padding:0 16px;background:#f5f7fb;color:#172033}
+    section{background:#fff;padding:20px;margin:16px 0;border-radius:12px;box-shadow:0 2px 8px #0001}
+    input,button{padding:9px;margin:4px;border:1px solid #ccd3df;border-radius:6px}button{background:#2463eb;color:#fff;cursor:pointer}.notice{color:#2463eb}
+    table{width:100%;border-collapse:collapse;margin-top:12px}td,th{padding:9px;border-bottom:1px solid #e5e8ee;text-align:left}.ai{background:#eef5ff;padding:12px;border-radius:8px;white-space:pre-wrap;min-height:24px}
+  </style>
+</head>
+<body>
+  <h1>작고 정확한 주문·재고 ERP</h1><p id="status" class="notice">API 연결 확인 중...</p>
+  <section><h2>상품 등록</h2><input id="sku" placeholder="SKU"><input id="name" placeholder="상품명"><input id="price" type="number" placeholder="가격"><input id="stock" type="number" placeholder="재고"><button onclick="addProduct()">등록</button></section>
+  <section><h2>상품·재고</h2><button onclick="loadAll()">새로고침</button><table><thead><tr><th>ID</th><th>SKU</th><th>상품명</th><th>가격</th><th>재고</th></tr></thead><tbody id="products"></tbody></table></section>
+  <section><h2>주문 생성</h2><input id="customer" placeholder="고객명"><input id="productId" type="number" placeholder="상품 ID"><input id="quantity" type="number" min="1" placeholder="수량"><button onclick="addOrder()">주문 확정</button></section>
+  <section><h2>최근 주문</h2><table><thead><tr><th>ID</th><th>고객</th><th>상태</th><th>금액</th><th>생성일</th></tr></thead><tbody id="orders"></tbody></table></section>
+  <section><h2>AI 조회</h2><p>재고·주문 데이터에 대해 질문하세요.</p><input id="aiQuestion" style="width:70%" placeholder="재고가 가장 적은 상품은?"><button onclick="askAI()">질문</button><div id="aiAnswer" class="ai">아직 질문하지 않았습니다.</div></section>
+  <script>
+    const API='http://localhost:8000';
+    const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    async function loadAll(){
+      const [p,o]=await Promise.all([fetch(API+'/api/products').then(r=>r.json()),fetch(API+'/api/orders').then(r=>r.json())]);
+      products.innerHTML=p.map(x=>`<tr><td>${x.id}</td><td>${esc(x.sku)}</td><td>${esc(x.name)}</td><td>${x.price.toLocaleString()}</td><td>${x.stock_quantity}</td></tr>`).join('');
+      orders.innerHTML=o.map(x=>`<tr><td>${x.id}</td><td>${esc(x.customer_name)}</td><td>${x.status}</td><td>${x.total_amount.toLocaleString()}</td><td>${new Date(x.created_at).toLocaleString()}</td></tr>`).join('');
+    }
+    async function addProduct(){const r=await fetch(API+'/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sku:sku.value,name:name.value,price:Number(price.value),stock_quantity:Number(stock.value)})});alert(r.ok?'상품을 등록했습니다.':(await r.json()).detail);if(r.ok)loadAll()}
+    async function addOrder(){const r=await fetch(API+'/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer_name:customer.value,items:[{product_id:Number(productId.value),quantity:Number(quantity.value)}]})});alert(r.ok?'주문을 확정했습니다.':(await r.json()).detail);if(r.ok)loadAll()}
+    async function askAI(){aiAnswer.textContent='분석 중...';const r=await fetch(API+'/api/ai/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:aiQuestion.value})});const d=await r.json();aiAnswer.textContent=r.ok?d.answer:d.detail}
+    fetch(API+'/health').then(()=>{status.textContent='API 연결됨';loadAll()}).catch(()=>status.textContent='API가 실행되지 않았습니다.');
+  </script>
+</body>
+</html>

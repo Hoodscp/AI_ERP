@@ -1,0 +1,38 @@
+name: ai-erp-testbed
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ai-erp-testbed-db
+    environment:
+      POSTGRES_DB: erp
+      POSTGRES_USER: erp_user
+      POSTGRES_PASSWORD: erp_password_change_me
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U erp_user -d erp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    container_name: ai-erp-testbed-api
+    environment:
+      DATABASE_URL: postgresql+psycopg://erp_user:erp_password_change_me@db:5432/erp
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
